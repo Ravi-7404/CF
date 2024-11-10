@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Random Codeforces Questions</title>
+    <script src="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.js"></script>
+</head>
+<body class="bg-gray-100 text-gray-800 p-4">
+
+    <h1 class="text-3xl text-center text-blue-600 mb-6">Random Codeforces Questions (Not Submitted)</h1>
+
+    <ul id="question-list" class="space-y-4"></ul>
+
+    <button onclick="loadQuestions()" class="w-full bg-blue-600 text-white py-3 rounded-lg mt-6 hover:bg-blue-500 focus:outline-none">
+        Load New Questions
+    </button>
+
+    <script>
+        const userProfile = 'RoyalChalengersBanglore'; // Profile to exclude solved problems from
+
+        // Fetch solved problems for the user
+        async function getSolvedProblems() {
+            const url = `https://codeforces.com/api/user.status?handle=${userProfile}`;
+            const response = await fetch(url);
+            const data = await response.json();
+
+            // Extract problem IDs for problems the user has solved
+            const solvedProblems = new Set();
+            if (data.status === 'OK') {
+                data.result.forEach(submission => {
+                    solvedProblems.add(`${submission.problem.contestId}${submission.problem.index}`);
+                });
+            }
+            return solvedProblems;
+        }
+
+        // Load random questions that the user hasn't solved
+        async function loadQuestions() {
+            const questionListElement = document.getElementById('question-list');
+            questionListElement.innerHTML = ""; // Clear previous questions
+
+            const solvedProblems = await getSolvedProblems();
+            const url = 'https://codeforces.com/api/problemset.problems';
+            const response = await fetch(url);
+            const data = await response.json();
+
+            // Filter problems based on ratings (1000-1500) and exclude Graph, DP topics
+            const filteredProblems = data.result.problems.filter(problem => {
+                const rating = problem.rating;
+                const tags = problem.tags;
+                const validRating = rating >= 1000 && rating <= 1500; // Only problems with ratings 1000-1500
+                const excludeTags = tags.includes("Graph") || tags.includes("Dynamic Programming");
+                const problemId = `${problem.contestId}${problem.index}`;
+                const notSolved = !solvedProblems.has(problemId); // Only show unsolved problems
+                return validRating && !excludeTags && notSolved;
+            });
+
+            // Randomly select 20 problems from the filtered list
+            const selectedProblems = [];
+            for (let i = 0; i < 20; i++) {
+                const randomProblem = filteredProblems[Math.floor(Math.random() * filteredProblems.length)];
+                selectedProblems.push(randomProblem);
+            }
+
+            // Display the questions
+            selectedProblems.forEach(problem => {
+                const listItem = document.createElement('li');
+                listItem.classList.add('bg-white', 'p-4', 'border', 'border-gray-300', 'rounded-lg', 'flex', 'flex-wrap', 'justify-between', 'items-center', 'shadow-lg');
+
+                const tagsHTML = problem.tags.map(tag => `<span class="bg-gray-200 text-gray-700 text-sm py-1 px-3 rounded-full mr-2 mb-2">${tag}</span>`).join('');
+                
+                listItem.innerHTML = `
+                    <span class="font-bold text-lg text-blue-600">${problem.rating}</span>
+                    <a href="https://codeforces.com/problemset/problem/${problem.contestId}/${problem.index}" target="_blank" class="text-blue-600 hover:underline text-lg mb-2 block">${problem.name}</a>
+                    <div class="w-full flex flex-wrap">${tagsHTML}</div>
+                `;
+                questionListElement.appendChild(listItem);
+            });
+        }
+
+        // Initialize the page with random questions
+        loadQuestions();
+    </script>
+</body>
+</html>
